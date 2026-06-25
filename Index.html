@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liam's World — Family Travel Archive</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0B1628;font-family:system-ui,-apple-system,sans-serif;color:#E8EEF4;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+
+/* NAV */
+#nav{position:sticky;top:0;z-index:100;background:#0F1E35;border-bottom:1px solid #1E3A5F;display:flex;align-items:center;padding:0 16px;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+#nav-brand{font-size:13px;font-weight:800;color:#F0C040;margin-right:12px;white-space:nowrap;padding:14px 0;flex-shrink:0}
+.nav-btn{padding:14px 12px;background:none;border:none;font-size:12px;font-weight:600;color:#6B8FA8;border-bottom:2px solid transparent;white-space:nowrap;flex-shrink:0;transition:color .15s}
+.nav-btn.active{color:#F0C040;border-bottom-color:#F0C040}
+
+/* HERO */
+#hero{background:linear-gradient(150deg,#0B1628 0%,#0F2040 55%,#1a1505 100%);padding:40px 20px 32px;text-align:center}
+#hero .eyebrow{font-size:10px;color:#F0C040;letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px}
+#hero h1{margin:0 0 6px;font-size:28px;font-weight:800;color:#fff;letter-spacing:-1px;font-family:Georgia,serif}
+#hero .quote{margin:0 0 24px;color:#C4E0F9;font-size:13px;max-width:380px;margin-left:auto;margin-right:auto;font-family:Georgia,serif;font-style:italic;line-height:1.7}
+.hero-stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.hero-stat{background:rgba(255,255,255,.06);border-radius:10px;padding:9px 13px;min-width:68px;border:1px solid rgba(240,192,64,.2);text-align:center}
+.hero-stat-val{font-size:19px;font-weight:800;color:#F0C040;letter-spacing:-.5px}
+.hero-stat-lbl{font-size:9px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+/* SECTIONS */
+.section{display:none;padding:22px 16px;max-width:720px;margin:0 auto}
+.section.active{display:block}
+.section-head{font-family:Georgia,serif;font-size:20px;font-weight:800;color:#E8EEF4;letter-spacing:-.3px;margin:0 0 3px}
+.section-sub{color:#6B8FA8;font-size:12px;font-style:italic;margin:0 0 18px}
+
+/* CHIPS */
+.chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+
+/* TIMELINE */
+.year-row{display:flex;align-items:center;gap:10px;background:#162540;border:1px solid #1E3A5F;border-radius:10px;padding:11px 14px;cursor:pointer;margin-bottom:8px;transition:border-color .15s}
+.year-row.open{border-color:#F0C040;border-radius:10px 10px 0 0;margin-bottom:0;background:#1C2E4A}
+.year-dot{width:9px;height:9px;border-radius:50%;background:#5A8AB0;flex-shrink:0}
+.year-row.open .year-dot{background:#F0C040}
+.year-num{font-weight:800;font-size:17px;font-family:Georgia,serif;color:#E8EEF4;min-width:40px}
+.year-row.open .year-num{color:#F0C040}
+.year-chips{flex:1;display:flex;gap:6px;flex-wrap:wrap}
+.year-caret{color:#6B8FA8;font-size:12px;flex-shrink:0}
+.trips-panel{background:#162540;border:1px solid #F0C040;border-top:1px solid #1E3A5F;border-radius:0 0 10px 10px;margin-bottom:8px}
+.trip-row{display:flex;gap:10px;padding:10px 14px;align-items:flex-start;cursor:pointer;transition:background .1s}
+.trip-row:not(:last-child){border-bottom:1px solid #1E3A5F}
+.trip-row:hover{background:#1C2E4A}
+.trip-emoji{font-size:18px;flex-shrink:0;margin-top:1px}
+.trip-info{flex:1}
+.trip-name{font-weight:700;color:#E8EEF4;font-size:13px}
+.trip-tag{color:#6B8FA8;font-size:11px;margin-top:2px;line-height:1.5}
+.trip-arrow{color:#5A8AB0;font-size:11px;flex-shrink:0;margin-top:3px;align-self:flex-start}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center;padding:16px}
+#modal-overlay.open{display:flex}
+#modal-box{background:#1C2E4A;border:1px solid #F0C040;border-radius:14px;max-width:540px;width:100%;max-height:88vh;overflow-y:auto;padding:22px;position:relative}
+#modal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#6B8FA8;font-size:18px;line-height:1;padding:4px}
+#modal-emoji{font-size:30px;margin-bottom:8px}
+#modal-title{font-family:Georgia,serif;font-size:17px;color:#E8EEF4;margin:0 0 8px}
+#modal-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+#modal-who-label{font-size:10px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px}
+#modal-who{font-size:12px;color:#E8EEF4;margin-bottom:12px}
+#modal-detail{font-family:Georgia,serif;font-size:13px;color:#E8EEF4;line-height:1.75;font-style:italic;margin-bottom:14px}
+#modal-hl-label{font-size:10px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px}
+.modal-hl{display:flex;gap:8px;margin-bottom:5px;font-size:12px;color:#C4E0F9}
+.modal-hl-arrow{color:#F0C040;flex-shrink:0}
+#modal-milestone{margin-top:14px;padding:12px 14px;background:rgba(240,192,64,.08);border-radius:8px;border-left:3px solid #F0C040;font-family:Georgia,serif;font-size:12px;color:#E8EEF4;line-height:1.65;font-style:italic}
+
+/* MAP */
+.map-tabs{display:flex;gap:8px;margin-bottom:14px}
+.map-tab{padding:8px 15px;border-radius:6px;border:1px solid #1E3A5F;background:#162540;color:#6B8FA8;font-size:12px;font-weight:600;transition:all .15s}
+.map-tab.active{border-color:#F0C040;background:rgba(240,192,64,.1);color:#F0C040}
+.map-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#6B8FA8}
+.legend-box{width:13px;height:13px;border-radius:3px;flex-shrink:0}
+#map-wrap{background:#162540;border:1px solid #1E3A5F;border-radius:12px;padding:12px;position:relative;min-height:180px}
+#map-loading{text-align:center;padding:50px 20px;color:#6B8FA8;font-size:13px}
+#map-error{text-align:center;padding:30px;color:#E07B5A;font-size:12px;display:none}
+#map-svg{width:100%;height:auto;display:none}
+svg path.st{stroke:#0B1628;stroke-width:.7px;transition:opacity .12s;cursor:pointer}
+svg path.st:hover{opacity:1!important;stroke:#E8EEF4;stroke-width:1.4px}
+svg path.st-border{fill:none;stroke:#0B1628;stroke-width:.8px;pointer-events:none}
+.st-label{font-size:7.5px;fill:#0B1628;font-weight:700;pointer-events:none;user-select:none}
+#map-tooltip{position:absolute;background:#0F1E35;border:1px solid #1E3A5F;border-radius:6px;padding:8px 12px;font-size:12px;color:#E8EEF4;pointer-events:none;opacity:0;transition:opacity .1s;white-space:normal;max-width:260px;z-index:10;line-height:1.5}
+#map-tooltip.show{opacity:1}
+.map-stat-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.map-stat{background:#162540;border:1px solid #1E3A5F;border-radius:8px;padding:9px 13px;text-align:center}
+.map-stat-val{font-size:18px;font-weight:800;color:#F0C040}
+.map-stat-lbl{font-size:10px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+#world-panel{display:none}
+.country-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:#1C2E4A;border-radius:8px;border:1px solid #1E3A5F;margin-bottom:8px}
+.country-row.stayed{border-color:rgba(240,192,64,.35)}
+.cflag{font-size:20px;flex-shrink:0}
+.cname{font-weight:700;font-size:13px;margin-bottom:2px}
+.cname.s{color:#F0C040}.cname.v{color:#C4E0F9}
+.cnote{color:#6B8FA8;font-size:12px;line-height:1.5}
+.ctag{font-size:9px;font-weight:700;text-transform:uppercase;flex-shrink:0;margin-top:2px}
+
+/* MILESTONES */
+.milestone-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.mf-btn{padding:4px 11px;border-radius:20px;border:1px solid #1E3A5F;background:transparent;color:#6B8FA8;font-size:11px;font-weight:600;transition:all .15s}
+.mf-btn.active{border-color:#F0C040;background:rgba(240,192,64,.12);color:#F0C040}
+.milestone-card{background:#162540;border-radius:10px;border:1px solid #1E3A5F;border-left:3px solid #F0C040;padding:14px 15px;margin-bottom:9px}
+.mc-inner{display:flex;gap:10px;align-items:flex-start}
+.mc-emoji{font-size:22px;flex-shrink:0}
+.mc-text{font-family:Georgia,serif;font-size:13px;color:#E8EEF4;line-height:1.7;font-style:italic;margin:0 0 8px}
+.mc-chips{display:flex;gap:6px;flex-wrap:wrap}
+
+/* CAST */
+.cast-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px}
+.cast-card{background:#162540;border-radius:10px;border:1px solid #1E3A5F;padding:14px 14px;border-top:2px solid var(--cc);cursor:pointer;transition:background .15s,border-color .15s}
+.cast-card:hover{background:#1C2E4A;border-color:var(--cc)}
+.cast-emoji{font-size:24px;margin-bottom:6px}
+.cast-name{font-weight:700;color:#E8EEF4;font-size:13px;margin-bottom:2px}
+.cast-role{font-size:11px;font-weight:600;margin-bottom:6px}
+.cast-desc{font-size:11px;color:#6B8FA8;line-height:1.6}
+.cast-tap{font-size:10px;color:#5A8AB0;margin-top:7px;letter-spacing:.04em}
+
+/* STATS */
+.stat-metric-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.sm-btn{padding:6px 11px;border-radius:6px;border:1px solid #1E3A5F;background:transparent;color:#6B8FA8;font-size:11px;font-weight:600;transition:all .15s}
+.sm-btn.active{background:rgba(255,255,255,.05)}
+.bar-chart{background:#162540;border-radius:12px;border:1px solid #1E3A5F;padding:14px 16px;margin-bottom:16px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.bar-year{width:32px;font-size:12px;font-weight:700;color:#E8EEF4;flex-shrink:0}
+.bar-track{flex:1;background:#1E3A5F;border-radius:4px;height:18px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .35s}
+.bar-val{width:72px;font-size:11px;font-weight:600;text-align:right;flex-shrink:0}
+.totals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:8px}
+.total-card{background:#162540;border-radius:8px;border:1px solid #1E3A5F;padding:9px 12px}
+.total-val{font-size:17px;font-weight:800}
+.total-lbl{font-size:10px;color:#6B8FA8;margin-top:2px;text-transform:uppercase;letter-spacing:.07em}
+
+footer{padding:24px 16px;text-align:center;color:#6B8FA8;font-size:11px;border-top:1px solid #1E3A5F;margin-top:16px}
+</style>
+</head>
+<body>
+
+<div id="hero">
+  <div class="eyebrow">A Family Record of Adventures · 2015 – Present</div>
+  <h1>Liam's World</h1>
+  <p class="quote">"This journal was compiled from notes, memories, and stories collected over the years. It is a living document."</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-val">72,950</div><div class="hero-stat-lbl">Miles</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">65</div><div class="hero-stat-lbl">Trips</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">231</div><div class="hero-stat-lbl">Nights Away</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">19</div><div class="hero-stat-lbl">States</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">8</div><div class="hero-stat-lbl">Countries</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">11</div><div class="hero-stat-lbl">Disney Trips</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">5</div><div class="hero-stat-lbl">Cruises</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">9</div><div class="hero-stat-lbl">Shea Trips</div></div>
+  </div>
+</div>
+
+<div id="nav">
+  <div id="nav-brand">✈ Liam's Travels</div>
+  <button class="nav-btn active" onclick="showSection('timeline')">Timeline</button>
+  <button class="nav-btn" onclick="showSection('map')">Map</button>
+  <button class="nav-btn" onclick="showSection('milestones')">Milestones</button>
+  <button class="nav-btn" onclick="showSection('cast')">Cast</button>
+  <button class="nav-btn" onclick="showSection('stats')">Stats</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ TIMELINE -->
+<div id="section-timeline" class="section active">
+  <h2 class="section-head">Journey by Year</h2>
+  <p class="section-sub">Tap a year to see all trips · Tap any trip for the full story</p>
+  <div id="timeline-list"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ MAP -->
+<div id="section-map" class="section">
+  <h2 class="section-head">Where We've Been</h2>
+  <p class="section-sub" style="margin-bottom:12px"> </p>
+  <div class="map-tabs">
+    <button class="map-tab active" onclick="showMapTab('us',this)">🇺🇸 United States</button>
+    <button class="map-tab" onclick="showMapTab('world',this)">🌍 World</button>
+  </div>
+  <div id="us-panel">
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-box" style="background:#F0C040"></div>Visited &amp; slept overnight</div>
+      <div class="legend-item"><div class="legend-box" style="background:#5A8AB0"></div>Visited (port / drive-through)</div>
+      <div class="legend-item"><div class="legend-box" style="background:#1E3A5F"></div>Not yet</div>
+    </div>
+    <div id="map-wrap">
+      <div id="map-loading">Loading map…</div>
+      <div id="map-error"></div>
+      <div id="map-tooltip"></div>
+      <svg id="map-svg" viewBox="0 0 960 600"></svg>
+    </div>
+    <div class="map-stat-bar">
+      <div class="map-stat"><div class="map-stat-val">19</div><div class="map-stat-lbl">States Visited</div></div>
+      <div class="map-stat"><div class="map-stat-val">15</div><div class="map-stat-lbl">States Slept</div></div>
+      <div class="map-stat"><div class="map-stat-val">32</div><div class="map-stat-lbl">Still To Go</div></div>
+    </div>
+  </div>
+  <div id="world-panel">
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-box" style="background:#F0C040"></div>Visited &amp; slept overnight</div>
+      <div class="legend-item"><div class="legend-box" style="background:#5A8AB0"></div>Port / layover visit</div>
+      <div class="legend-item"><div class="legend-box" style="background:#1E3A5F"></div>Not visited</div>
+    </div>
+    <div id="world-map-wrap" style="background:#162540;border:1px solid #1E3A5F;border-radius:12px;padding:12px;position:relative;min-height:200px">
+      <div id="world-loading" style="text-align:center;padding:50px 20px;color:#6B8FA8;font-size:13px">Loading map…</div>
+      <div id="world-error" style="display:none;text-align:center;padding:30px;color:#E07B5A;font-size:12px"></div>
+      <div id="world-tooltip" style="position:absolute;background:#0F1E35;border:1px solid #1E3A5F;border-radius:6px;padding:8px 12px;font-size:12px;color:#E8EEF4;pointer-events:none;opacity:0;transition:opacity .1s;max-width:260px;z-index:10;line-height:1.5"></div>
+      <svg id="world-svg" style="width:100%;height:auto;display:none" viewBox="0 0 960 500"></svg>
+    </div>
+    <div class="map-stat-bar" style="margin-top:12px">
+      <div class="map-stat"><div class="map-stat-val">8</div><div class="map-stat-lbl">Countries Visited</div></div>
+      <div class="map-stat"><div class="map-stat-val">4</div><div class="map-stat-lbl">Slept Overnight</div></div>
+      <div class="map-stat"><div class="map-stat-val">4</div><div class="map-stat-lbl">Port / Layover</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ MILESTONES -->
+<div id="section-milestones" class="section">
+  <h2 class="section-head">Greatest Hits</h2>
+  <p class="section-sub">The moments worth remembering forever</p>
+  <div class="milestone-filters" id="mf-filters"></div>
+  <div id="milestone-list"></div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ CAST -->
+<div id="section-cast" class="section">
+  <h2 class="section-head">The Cast</h2>
+  <p class="section-sub">The people who made these memories</p>
+  <div class="cast-grid" id="cast-grid"></div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ STATS -->
+<div id="section-stats" class="section">
+  <h2 class="section-head">Year by Year Stats</h2>
+  <div class="stat-metric-btns" id="stat-btns"></div>
+  <div class="bar-chart" id="bar-chart"></div>
+  <div class="totals-grid">
+    <div class="total-card"><div class="total-val" style="color:#F0C040">72,950</div><div class="total-lbl">Total miles</div></div>
+    <div class="total-card"><div class="total-val" style="color:#4CAF82">17,145</div><div class="total-lbl">Driving miles</div></div>
+    <div class="total-card"><div class="total-val" style="color:#C4E0F9">55,805</div><div class="total-lbl">Flight miles</div></div>
+    <div class="total-card"><div class="total-val" style="color:#E07B5A">231</div><div class="total-lbl">Nights away</div></div>
+    <div class="total-card"><div class="total-val" style="color:#6B8FA8">~3×</div><div class="total-lbl">Around the Earth</div></div>
+    <div class="total-card"><div class="total-val" style="color:#6B8FA8">30.5%</div><div class="total-lbl">Way to the Moon</div></div>
+  </div>
+</div>
+
+<!-- TRIP MODAL -->
+<div id="modal-overlay" onclick="closeModal()">
+  <div id="modal-box" onclick="event.stopPropagation()">
+    <button id="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-emoji"></div>
+    <h3 id="modal-title"></h3>
+    <div id="modal-chips"></div>
+    <div id="modal-who-label">Who was there</div>
+    <div id="modal-who"></div>
+    <p id="modal-detail"></p>
+    <div id="modal-hl-label">Highlights</div>
+    <div id="modal-highlights"></div>
+    <div id="modal-milestone"></div>
+  </div>
+</div>
+
+<!-- CAST MEMBER MODAL -->
+<div id="cast-modal-overlay" onclick="closeCastModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div id="cast-modal-box" onclick="event.stopPropagation()" style="background:#1C2E4A;border-radius:14px;max-width:500px;width:100%;max-height:88vh;overflow-y:auto;padding:22px;position:relative;border:1px solid #1E3A5F">
+    <button onclick="closeCastModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#6B8FA8;font-size:18px;cursor:pointer">✕</button>
+    <div id="cm-emoji" style="font-size:30px;margin-bottom:8px"></div>
+    <h3 id="cm-name" style="font-family:Georgia,serif;font-size:18px;color:#E8EEF4;margin:0 0 3px"></h3>
+    <div id="cm-role" style="font-size:12px;font-weight:600;margin-bottom:14px"></div>
+    <!-- Mini stats bar -->
+    <div id="cm-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;padding:12px 14px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid #1E3A5F"></div>
+    <!-- Trip list -->
+    <div style="font-size:10px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Trips Together</div>
+    <div id="cm-trips"></div>
+    <!-- Personal note placeholder -->
+    <div id="cm-note-wrap" style="margin-top:16px;padding:12px 14px;background:rgba(240,192,64,.06);border-radius:8px;border:1px dashed rgba(240,192,64,.3);display:none">
+      <div style="font-size:10px;color:#B8922A;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Personal Note</div>
+      <div id="cm-note" style="font-family:Georgia,serif;font-size:13px;color:#E8EEF4;line-height:1.7;font-style:italic"></div>
+    </div>
+  </div>
+</div>
+
+<footer>For Liam — so you know where you've been. · A living document, always growing.</footer>
+
+<script>
+// ═══════════════════════════════════════════════════ DATA
+
+const YEARS = [
+  {year:2015,nights:2,drive:360,flight:0,sv:2,ss:2,countries:1,trips:[
+    {name:"Williamsburg, VA",emoji:"🏛️",type:"road",tag:"Liam's very first trip — 3 months old.",dates:"September 2015",who:["Melissa","Jeremiah","Liam"],detail:"Liam was just three months old on his very first trip. The family headed to Williamsburg, Virginia — a gentle introduction to the road for a baby who would go on to become one of the most well-traveled kids around.",hl:["Liam's first trip ever","3 months old"],ms:null}
+  ]},
+  {year:2016,nights:12,drive:400,flight:1840,sv:3,ss:3,countries:1,trips:[
+    {name:"Disney World Trip #1",emoji:"✨",type:"flight",tag:"A new family tradition begins.",dates:"January 2016",who:["Melissa","Jeremiah","Liam"],detail:"The first Disney World trip. Liam was just over a year old. Caribbean Beach Resort for a full week. Dinner with Uncle Frank and Aunt Kathy. Baby Franky was born during the trip — a new family member arriving during the very first Disney trip.",hl:["Caribbean Beach Resort","1900 Park Fare character breakfast","Chef Mickey's","Hoop-Dee-Doo Review","Crystal Palace","Tusker House","Be Our Guest","Baby Franky born during the trip"],ms:"✨ A new family tradition begins. The first of many Disney trips."},
+    {name:"Rehoboth Beach, DE",emoji:"🌊",type:"road",tag:"Liam touched the ocean for the very first time.",dates:"August 14–16, 2016",who:["Melissa","Jeremiah","Liam"],detail:"Liam's very first beach trip. Stayed at the Oceanus Hotel. Dinner at the Summer House Restaurant — Liam loved his mac and cheese. A walk downtown for frozen yogurt. Day two: breakfast at the Dough Roller (cinnamon French toast), matching red Nike shoes for dad and Liam. The evening ended at Funland — Liam rode the merry-go-round with mom — then a walk to the water's edge where he touched the ocean for the very first time.",hl:["First time touching the ocean","Matching red Nike shoes with dad","Funland merry-go-round with mom","Dough Roller cinnamon French toast","Frozen yogurt downtown"],ms:"🌊 Liam touched the ocean for the very first time. He crawled and walked all over that beach like he owned it."},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"First of the annual Ewing family beach trips.",dates:"September 2016",who:["Ewing Family"],detail:"The first of many annual Ewing family beach trips to Ocean City, New Jersey.",hl:["First Ewing family OC trip","Annual tradition begins"],ms:null}
+  ]},
+  {year:2017,nights:9,drive:900,flight:0,sv:3,ss:3,countries:1,trips:[
+    {name:"Cape May Area, NJ",emoji:"🏕️",type:"road",tag:"Cabin stay, zoo, boardwalk, and beach.",dates:"May 2017",who:["Melissa","Jeremiah","Liam"],detail:"A cabin stay near the Delaware beaches. Cape May County Zoo, Sea Isle City, boardwalk and beach.",hl:["Cape May County Zoo","Sea Isle City","Boardwalk and beach"],ms:null},
+    {name:"Rocking Horse Ranch, Catskills NY",emoji:"🐴",type:"road",tag:"Liam's first horse ride.",dates:"September 2017",who:["Melissa","Jeremiah","Liam"],detail:"A fun resort stay in the Catskills. Liam flew down the summer tubing mats, bounced on the trampoline harness, made a friend on the playground, and took his very first horse ride.",hl:["First horse ride","Summer tubing mats","Trampoline harness","Small animal collection"],ms:"🐴 Liam's first horse ride. A short walk but a big moment."},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"Annual Ewing family beach trip.",dates:"September 2017",who:["Ewing Family"],detail:"Annual Ewing family beach trip to Ocean City, NJ.",hl:[],ms:null}
+  ]},
+  {year:2018,nights:14,drive:920,flight:1840,sv:3,ss:3,countries:1,trips:[
+    {name:"Great Wolf Lodge, Williamsburg VA",emoji:"💦",type:"road",tag:"Water park getaway.",dates:"March 2018",who:["Melissa","Jeremiah","Liam"],detail:"A several-day water park getaway at Great Wolf Lodge in Williamsburg.",hl:["Great Wolf Lodge water park"],ms:null},
+    {name:"Disney World Trip #2",emoji:"✨",type:"flight",tag:"Second Disney trip — rental house stay.",dates:"May 2018",who:["Melissa","Jeremiah","Liam"],detail:"The family's second Disney World trip, staying in a rental house. Dining highlights: Chef Mickey's, Cape May Cafe character breakfast, Mickey's Backyard BBQ dinner show, Monsters Inc. Laugh Floor.",hl:["Chef Mickey's","Cape May Cafe character breakfast","Mickey's Backyard BBQ dinner show"],ms:null},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"Annual Ewing family beach trip.",dates:"September 2018",who:["Ewing Family"],detail:"Annual Ewing family beach trip.",hl:[],ms:null},
+    {name:"Shea Vacation #1 — Massanutten, VA",emoji:"🍂",type:"road",tag:"The very first Shea family vacation. A tradition is born.",dates:"October 2018",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Uncle Jordan"],detail:"The very first Shea family vacation. An AirBnB in Massanutten, Virginia, in the Shenandoah Valley. Beautiful fall terrain, a scenic drive along the Blue Ridge Parkway, and the stunning Luray Caverns.",hl:["Blue Ridge Parkway drive","Shenandoah National Park","Luray Caverns","First Shea family trip"],ms:"🍂 The first Shea family trip. What started here became one of the most treasured recurring traditions in the family calendar."}
+  ]},
+  {year:2019,nights:19,drive:1630,flight:1840,sv:5,ss:5,countries:1,trips:[
+    {name:"Seneca Lake, Finger Lakes",emoji:"💧",type:"road",tag:"Accidentally discovered. A waterfall named for Liam.",dates:"June 2019",who:["Melissa","Jeremiah","Liam","Shawn"],detail:"The original plan was Lake George — but it was bike week. The family pivoted and stumbled upon the Finger Lakes. Their cabin had its own pebble beach, a boathouse with a canoe, and a waterfall on the property. Liam was told it was his own beach. Over the trip they discovered Watkins Glen, Havana Glen, and — the crown jewel — 'Liam's Falls,' found while kayaking and named for him on the spot.",hl:["Liam's Falls — named for him","First canoe ride","Watkins Glen State Park gorge","Havana Glen waterfall pool","Accidentally discovered the Finger Lakes"],ms:"💧 \"Liam's Falls\" — a waterfall named for a four-year-old who helped discover it."},
+    {name:"Ocean City, NJ — Ewing Family (May)",emoji:"🏖️",type:"road",tag:"Ewing family trip — May this year.",dates:"May 2019",who:["Ewing Family"],detail:"Ewing family beach trip, this year in May.",hl:[],ms:null},
+    {name:"Ocean City, MD with Jamie",emoji:"🌊",type:"road",tag:"Overnight with Jamie, Emma, and Wendy.",dates:"July 2019",who:["Melissa","Jeremiah","Liam","Jamie","Emma","Wendy"],detail:"An overnight at the Holiday Inn & Suites in Ocean City, Maryland. Liam loved the pool with its small slides and lazy river. Boardwalk dinner in the evening.",hl:["Pool with slides and lazy river","Boardwalk dinner"],ms:null},
+    {name:"Disney World Trip #3 — Christmas",emoji:"🎄",type:"flight",tag:"Pop Century. Mickey's Very Merry Christmas Party.",dates:"December 2019",who:["Melissa","Jeremiah","Liam"],detail:"Pop Century Resort. Disney Springs on arrival: the LEGO Store, Rainforest Café volcano, the Christmas Tree walk. Chef Mickey's breakfast. Grand Floridian gingerbread house. A surprise boat ride to Fort Wilderness and the Hoop-Dee-Doo Review. First Skyliner ride to Hollywood Studios. Mickey's Very Merry Christmas Party with the Elsa and Anna castle lighting.",hl:["Mickey's Very Merry Christmas Party","First Skyliner ride","Toy Story Land first visit","Rainforest Café volcano","Hoop-Dee-Doo Review","Grand Floridian gingerbread house","Chef Mickey's breakfast"],ms:"🎄 The Rainforest Café volcano: loved it from a distance, nervous up close. Classic Liam."},
+    {name:"Shea Vacation #2 — Conesus Lake, NY",emoji:"🍁",type:"road",tag:"Niagara Falls first visit. The Maid of the Mist.",dates:"October 2019",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop"],detail:"A six-hour drive through Williamsport, PA. The lakehouse on Conesus Lake had five bedrooms, two kitchens, a downstairs game room. Liam's love of paddle boarding emerged — jumping off the dock, inventing games. The trip included Niagara Falls (US side) for the first time — Maid of the Mist, the Strong Museum of Play in Rochester, and Letchworth State Park.",hl:["Niagara Falls — first time (US side)","Maid of the Mist","Liam's paddleboard obsession begins","Strong Museum of Play, Rochester","Letchworth State Park"],ms:"🍁 Niagara Falls for the first time. The Maid of the Mist. Liam's face when the spray hit."}
+  ]},
+  {year:2020,nights:19,drive:3350,flight:920,sv:7,ss:6,countries:1,trips:[
+    {name:"Ocean City, MD with Jamie",emoji:"🌊",type:"road",tag:"Return overnight with Jamie and Emma.",dates:"July 2020",who:["Melissa","Jeremiah","Liam","Jamie","Emma","Wendy"],detail:"A return overnight to Ocean City, Maryland with Jamie, Emma, and Wendy. Pool, boardwalk, a good summer night away.",hl:["Pool and boardwalk"],ms:null},
+    {name:"Shea Vacation #3 — Seneca Lake (COVID)",emoji:"💧",type:"road",tag:"First emergence after COVID. Three waterfalls, then a bigger one, then another.",dates:"June 6–11, 2020",who:["Melissa","Jeremiah","Liam","Jamie","Emma"],detail:"The first emergence after COVID hit. A home on the northeast side of Seneca Lake with a beautiful overlook, private beach and dock. Jamie and Emma joined mid-week. A boat tour where Liam got to drive. A creek walk with three waterfalls — then a bigger one around the bend — then another spotted by Melissa. Liam was swimming fully head-down. The family stayed an extra night near Watkins Glen rather than leave.",hl:["Liam drove the boat on the Erie Canal tour","Three waterfalls — then a bigger one — then another","Liam swimming head-down underwater","Stayed an extra night — not ready to leave"],ms:"💧 The man on the trail who turned back too soon. They almost did too. Keep going."},
+    {name:"Lums Pond — First Tent Camping",emoji:"⛺",type:"road",tag:"Liam's first night ever sleeping in a tent.",dates:"Summer 2020",who:["Melissa","Jeremiah","Liam","Jamie","Emma"],detail:"Liam's first night ever sleeping in a tent. An overnight at Lums Pond State Park with Jamie and Emma.",hl:["First tent camping night ever"],ms:"⛺ Liam's first night ever sleeping in a tent."},
+    {name:"Holly Lakes Birthday Cabin, DE",emoji:"🎂",type:"road",tag:"Birthday cabin stay near Delaware beaches.",dates:"Summer 2020",who:["Melissa","Jeremiah","Liam","Ethan Stump & family"],detail:"A cabin stay at Holly Lakes Campground for Liam's birthday.",hl:["Liam's birthday trip"],ms:null},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"Annual Ewing family beach trip.",dates:"September 2020",who:["Ewing Family"],detail:"Annual Ewing family trip.",hl:[],ms:null},
+    {name:"Shea Vacation #4 — Honeoye Lake, NY",emoji:"🍁",type:"road",tag:"Full house. Second Niagara Falls visit.",dates:"October 2020",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Uncle Stephen","Aunt Hope","Uncle Jordan"],detail:"A full house on Honeoye Lake. Liam tried his own kids' kayak. Jeremiah kayaked solo on a rough, windy day with white-capped waves. The group explored a nearby finger lake that has no houses — still completely natural. A return to Niagara Falls (US side).",hl:["Liam's first solo kayak","Jeremiah's windy solo kayak","Second Niagara Falls visit","Natural undeveloped finger lake"],ms:null},
+    {name:"Disney World Trip #4 — Thanksgiving",emoji:"🦃",type:"flight",tag:"Liam shouted 'WE'RE GOING TO DISNEY!!!!' — then the family drove 1,100 miles home.",dates:"November 2020",who:["Melissa","Jeremiah","Liam"],detail:"Art of Animation. First rope drop. Liam decorated the hotel room window with Christmas decorations from home. Hollywood Studios, Magic Kingdom on Thanksgiving. Then Liam got sick at Epcot — couldn't fly home during the pandemic. Melissa waited hours for a rental car. The family drove through the night — Georgia at 3:30am, a hotel stop just over the Florida-Georgia line, then through DC and Baltimore all the way home as the sun went down. All COVID tests negative. Liam was, as Jeremiah wrote, 'just amazing.'",hl:["Peter Pan's Flight — twice!","Haunted Mansion first time","Liam decorated the hotel room window","Drove 1,100 miles home through the night","Hotel stop in Georgia at 3:30am","All COVID tests negative"],ms:"🚗 The drive home from Disney. Georgia at 3:30am. Hotel stop just over the state line. Made it home at sunset. Liam was amazing throughout."}
+  ]},
+  {year:2021,nights:27,drive:3095,flight:9545,sv:9,ss:9,countries:2,trips:[
+    {name:"Gatlinburg & Great Smoky Mountains, TN",emoji:"🏔️",type:"road",tag:"Six nights. The trail that was three miles each way.",dates:"April 2021",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Abuela","Abuelo"],detail:"Spring break in Gatlinburg. Redbud trees in full bloom through Virginia on the drive. Pop Pop's birthday: Top Jump in Pigeon Forge — Liam loved the climbing wall with self-belay harnesses and talked about it for years. Then Haskins Creek Falls: Jeremiah saw '3 miles' and thought it was total. It was 3 miles each way. The first half was beautiful. The second half — climbing back up two mountains in spring warmth — was a challenge. Multiple rest breaks. When the top finally came, no one was happier.",hl:["Haskins Creek Falls — 3 miles each way (nobody knew)","Top Jump climbing wall self-belay — Liam's favourite","Dollywood first visit","Redbud trees in full bloom"],ms:"🏔️ The trail that was three miles each way. Nobody planned it. Liam made it. Everyone made it."},
+    {name:"Disney World Trip #5",emoji:"✨",type:"flight",tag:"First rope drop. Soarin' — finally. The poncho from 2016.",dates:"May 26–30, 2021",who:["Melissa","Jeremiah","Liam"],detail:"Hilton Bonnet Creek. Parks at ~35% COVID capacity. First ever rope drop at Magic Kingdom — four rides before 9:40am. Kali River Rapids was the day's favourite at Animal Kingdom. Epcot: Soarin' — finally, after years on the list. During a rain shower, Melissa pulled out the original poncho from their very first Disney trip five years earlier.",hl:["First ever rope drop","Soarin' — finally rode it","Poncho from 2016 used in the rain","Kali River Rapids — day's favourite","Parks at 35% COVID capacity"],ms:"✨ The poncho from the first Disney trip, used five years later in a rain shower at Epcot."},
+    {name:"Camelback Resort, Poconos PA",emoji:"🌊",type:"road",tag:"The wave pool. Liam could have stayed all day.",dates:"June 2021",who:["Melissa","Jeremiah","Liam"],detail:"An overnight at Camelback Resort. The wave pool was the absolute highlight.",hl:["Wave pool — absolute favourite"],ms:null},
+    {name:"Illinois — Chicago Birthday Trip",emoji:"🏙️",type:"flight",tag:"First time to Illinois. Visiting Aunt Katie.",dates:"July 2021",who:["Melissa","Jeremiah","Liam","Aunt Katie"],detail:"A four-day birthday trip to Chicago to visit Aunt Katie. The first time any of them had been to Illinois.",hl:["First time to Illinois","Chicago with Aunt Katie"],ms:null},
+    {name:"Arizona & California Birthday Road Trip",emoji:"🌵",type:"flight",tag:"Grand Canyon. Pacific Ocean first touch. Disneyland birthday fireworks.",dates:"July 17–23, 2021",who:["Melissa","Jeremiah","Liam"],detail:"Flew into Phoenix, drove to Williams on Route 66. The Grand Canyon Railway Wild West show. Then arriving at the South Rim and seeing the Grand Canyon for the first time — just there in its awe-inspiring, mouth-dropping way. Then the drive to Southern California through mountains, valleys, desert giving way to greenery — one of the top most memorable drives they'd ever done together. Crescent Bay Beach, Laguna — Liam and Jeremiah touched the Pacific Ocean for the very first time. Disneyland and California Adventure. Liam danced during his birthday fireworks show.",hl:["Grand Canyon first visit","Pacific Ocean — first time for Liam and Jeremiah","Disneyland birthday fireworks — Liam danced","Grand Canyon Railway glass observation car","Historic Route 66","\"When do they bring the toast out?\" — Liam at the restaurant"],ms:"🌵 \"Thank you for my birthday trip and thank you for bringing me to Arizona.\" — Liam, the whole trip."},
+    {name:"Kalahari Resort, Poconos PA",emoji:"💦",type:"road",tag:"Did not disappoint.",dates:"August 2021",who:["Melissa","Jeremiah","Liam"],detail:"An overnight at Kalahari Resort in the Poconos. Heard good things. Did not disappoint.",hl:["Kalahari water park"],ms:null},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"Annual Ewing trip.",dates:"September 2021",who:["Ewing Family"],detail:"Annual Ewing family beach trip. Melissa road-tripped to Chicago with Katie after.",hl:["Melissa road-tripped to Chicago with Katie after"],ms:null},
+    {name:"Disney Cruise #1 — Disney Dream",emoji:"🛳️",type:"flight",tag:"Busted at the airport by Liam's kindergarten teacher.",dates:"October 7–11, 2021",who:["Melissa","Jeremiah","Liam"],detail:"Playing UNO at the airport when they heard 'Liam?' — his kindergarten teacher. He'd left school early for an 'appointment.' She smiled and said an appointment with an airplane is always acceptable. Busted. After an hour delay they arrived in Orlando around 10pm, Lyfted to the Radisson in Cape Canaveral — and discovered their room was a suite at no extra charge. Boarding the Disney Dream at Port Canaveral. Castaway Cay. Liam's first cruise.",hl:["Busted by kindergarten teacher at the airport","Surprise suite at Radisson — same price","Liam's first cruise","Castaway Cay"],ms:"✈️ Busted at the airport by Liam's kindergarten teacher. He had left school early for 'an appointment' — with an airplane."}
+  ]},
+  {year:2022,nights:32,drive:3170,flight:6380,sv:10,ss:10,countries:1,trips:[
+    {name:"Disney World Trip #6",emoji:"✨",type:"flight",tag:"Contemporary/Bay Lake Tower.",dates:"February 17–20, 2022",who:["Melissa","Jeremiah","Liam"],detail:"Contemporary Resort/Bay Lake Tower. Chef Mickey's dinner on arrival. Magic Kingdom and Hollywood Studios day two. Disney Springs and pool day, T-Rex restaurant. Animal Kingdom and Epcot on the final day.",hl:["Contemporary/Bay Lake Tower","Chef Mickey's arrival dinner","T-Rex restaurant at Disney Springs"],ms:null},
+    {name:"Shea Vacation #5 — Watts Bar Lake, TN",emoji:"🐕",type:"road",tag:"Sophia's first vacation. Jordan's Tesla. Easter candy trail.",dates:"April 16–23, 2022",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Abuela","Abuelo","Uncle Jordan","Sophia"],detail:"A beautiful log cabin on a hill overlooking Watts Bar Lake with three fully fenced acres. Jordan arrived in his brand new Tesla. Easter morning: a candy trail leading to a big Easter basket — Liam came running back in shouting 'An Easter egg hunt! An Easter egg hunt!' Jeremiah carried three kayaks down over a hundred steps to the dock. Ozone Falls, Gatlinburg, Anakeesta. A Disney movie in Spanish with Abuela and Abuelo. Sophia got her own double bed and was exhausted every night.",hl:["Sophia's first vacation — her own double bed","Jordan's new Tesla","Easter candy trail — 'An Easter egg hunt!'","Ozone Falls","Anakeesta in Gatlinburg","Disney movie in Spanish with Abuelos"],ms:"🐕 Sophia's first family vacation. Her own double bed. She was exhausted."},
+    {name:"Outer Banks, NC — Boys Trip",emoji:"🌊",type:"road",tag:"Three days at the OBX — just Liam and Jeremiah.",dates:"June 2022",who:["Liam","Jeremiah","Jamie","Emma","Wendy"],detail:"While Melissa was on a work trip, Liam and Jeremiah drove to the Outer Banks for three days.",hl:["Boys trip — just Liam and Jeremiah","Outer Banks first visit"],ms:null},
+    {name:"Colorado Birthday Road Trip",emoji:"🏔️",type:"flight",tag:"Rampart Range Road. RMNP. Emerald Lake Trail.",dates:"July 2022",who:["Melissa","Jeremiah","Liam"],detail:"Flew to Denver, drove to Colorado Springs. Garden of the Gods — spotted a dirt road leaving Balance Rock that turned into the southern entrance to Rampart Range Road. At mile 3–4, with 17 miles to go, Liam voted to keep going. Best decision of the trip. Breckenridge: the Isak Heartstone troll sculpture. Snowmass: gondola up the mountain, ping pong with the Rockies all around. Glenwood Springs: hot springs pools, Liam's birthday dinner across the footbridge. Rocky Mountain National Park: elk on the streets, a black moose while driving, and the Emerald Lake Trail — one of the most epic and beautiful hikes they'd ever done together.",hl:["Rampart Range Road — Liam voted to keep going","Emerald Lake Trail, RMNP — one of the best hikes ever","Isak Heartstone troll, Breckenridge","Hot springs in Glenwood Springs","Black moose in Rocky Mountain NP","Garden of the Gods"],ms:"🏔️ Liam voted to keep going on Rampart Range Road at mile four. The best decision of the trip."},
+    {name:"Washington DC",emoji:"🏛️",type:"road",tag:"Willard Hotel. Spy Museum. National Mall.",dates:"September 2022",who:["Melissa","Jeremiah","Liam"],detail:"An overnight in Washington DC at the InterContinental Willard Hotel. US History Museum, National Children's Museum, and the Spy Museum. Time on the National Mall.",hl:["InterContinental Willard Hotel","Spy Museum","US History Museum","National Mall"],ms:null},
+    {name:"Illinois — Aunt Katie's Store",emoji:"🏙️",type:"flight",tag:"Second Illinois trip. First time seeing Katie's store.",dates:"October 2022",who:["Melissa","Jeremiah","Liam"],detail:"The family's second visit to Illinois and the first time seeing Aunt Katie's store.",hl:["First visit to Katie's store"],ms:null}
+  ]},
+  {year:2023,nights:27,drive:200,flight:10320,sv:5,ss:4,countries:2,trips:[
+    {name:"Disney World Trip #7",emoji:"✨",type:"flight",tag:"Caribbean Beach Resort.",dates:"January 2023",who:["Melissa","Jeremiah","Liam"],detail:"Caribbean Beach Resort. Parks: Hollywood Studios, Magic Kingdom, Epcot.",hl:["Caribbean Beach Resort"],ms:null},
+    {name:"Shea Vacation #6 — Poconos, PA",emoji:"🌲",type:"road",tag:"25 forested acres. UTV convoy. Abuela covered in mud.",dates:"April 8–15, 2023",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Abuela","Abuelo","Uncle Jordan","Alix"],detail:"A truly isolated AirBnB down the street from Lake Harmony — 25 forested acres, no other houses in sight. A game room that had a game room inside the game room. Weather feared to be bad; turned out sunny and 60s all week. A UTV guided trail ride everyone joined — including Abuela and Abuelo. The convoy got extremely muddy. They also walked the Pocono Raceway track. Easter egg hunt, BB guns from the back porch, Family Olympics, horseback riding, Easter train from Jim Thorpe.",hl:["UTV convoy — Abuela and Abuelo covered in mud","Game room inside the game room","Pocono Raceway track walk","BB guns from back porch","Easter egg hunt","Family Olympics"],ms:"🌲 The UTV convoy. Abuela and Abuelo in the back, completely covered in mud. Perfect."},
+    {name:"Disney World Trip #8 — Mom & Liam Special",emoji:"💛",type:"flight",tag:"Special Mom and Liam trip while dad was at the Indy 500.",dates:"May 2023",who:["Melissa","Liam"],detail:"A special Mom and Liam Disney trip while Jeremiah was at the Indianapolis 500.",hl:["Mom and Liam special trip","Dad at the Indy 500"],ms:null},
+    {name:"Alaska Cruise — Disney Wonder",emoji:"🏔️",type:"flight",tag:"Vancouver to Ketchikan. Float plane over five glaciers.",dates:"2023",who:["Melissa","Jeremiah","Liam"],detail:"Disney Wonder cruise departing from Vancouver, British Columbia. Ports: Skagway, Juneau, Ketchikan, back to Vancouver. The standout excursion: a float plane out of Juneau over five glaciers and the wilderness below.",hl:["Float plane over 5 glaciers out of Juneau","Departed from Vancouver, BC","Skagway","Ketchikan"],ms:"🏔️ A float plane out of Juneau over five glaciers. The wilderness below."},
+    {name:"Disney World Trip #9",emoji:"✨",type:"flight",tag:"Port Orleans Riverside. Avelo from New Castle.",dates:"November 2023",who:["Melissa","Jeremiah","Liam"],detail:"Flew Avelo Airlines from New Castle County Airport. First time staying at Port Orleans Riverside. Garden Grill breakfast at Epcot.",hl:["First time at Port Orleans Riverside","Avelo Airlines from New Castle Airport","Garden Grill breakfast at Epcot"],ms:null}
+  ]},
+  {year:2024,nights:33,drive:1820,flight:13660,sv:6,ss:6,countries:6,trips:[
+    {name:"Disney World Trip #10 — The 10th!",emoji:"🎆",type:"flight",tag:"A milestone. Private boat for the fireworks.",dates:"February 2024",who:["Melissa","Jeremiah","Liam"],detail:"Caribbean Beach Resort. Liam's 10th Disney World trip — a genuine milestone. To mark it, the family arranged a private boat tour at night on the Seven Seas Lagoon with a front-row view of the Magic Kingdom fireworks.",hl:["Liam's 10th Disney World trip","Private boat tour for the fireworks","Seven Seas Lagoon at night"],ms:"🎆 Ten Disney trips. A private boat for the fireworks. Worth every one of them."},
+    {name:"Shea Vacation #7 — Conesus Lake, NY",emoji:"🌨️",type:"road",tag:"Kayaking in the snow. Foster dogs Luna and her mum.",dates:"March 2024",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Uncle Jordan","Abuela","Abuelo"],detail:"Back to the Finger Lakes for spring break on Conesus Lake. Easter egg hunt and baskets. The family brought along two foster dogs — Luna and her mum — on their first trip with fosters. Kayaking in the snow. Easter Day celebrated together.",hl:["Foster dogs Luna and her mum","Kayaking in the snow","Easter egg hunt"],ms:null},
+    {name:"Legoland NY — Mom & Liam Special",emoji:"🧱",type:"road",tag:"Special Mom and Liam trip while dad was at the Indy 500.",dates:"May 2024",who:["Melissa","Liam"],detail:"A special Mom and Liam trip to Legoland in Goshen, New York.",hl:["Mom and Liam special trip","Legoland Goshen NY"],ms:null},
+    {name:"Bahamas Disney Cruise — Disney Magic",emoji:"🏝️",type:"flight",tag:"Nassau, Disney Lookout Cay. Erika's first cruise.",dates:"June 2024",who:["Melissa","Jeremiah","Liam","Erika","the boys"],detail:"Disney Magic from Fort Lauderdale. Pre-cruise: the Messi Experience in Miami, arcade and go karts, bowling. Nassau with the Baha Mar waterpark and a cabana. Disney Lookout Cay at Lighthouse Point — one of the first handful of visits to the brand new Disney island. Erika and the boys' first cruise.",hl:["Disney Lookout Cay — one of first visits to new island","Baha Mar waterpark Nassau","Messi Experience Miami","Erika and boys' first cruise"],ms:null},
+    {name:"California Road Trip",emoji:"🌉",type:"flight",tag:"Yosemite. Sequoia. Monterey. Tunnel View. El Capitan.",dates:"August 2024",who:["Melissa","Jeremiah","Liam"],detail:"Direct flight to San Francisco. Drove to the Tenaya Lodge outside Yosemite's south entrance — upgraded to a balcony room. Up at 6:50am, barely any cars. Tunnel View — coming out of the tunnel into sunshine and seeing the valley for the first time. Bridalveil Falls. El Capitan — surreal in person. Glacier Point: views over the whole valley that 'didn't look real.' Nobody wanted to leave. A guided UTV tour near Bass Lake, then on to Sequoia. Then Monterey: sea lions, the Aquarium, the Pacific coastal highway.",hl:["Tunnel View — first sight of Yosemite Valley","Glacier Point — views that didn't look real","El Capitan surreal in person","UTV tour near Bass Lake — Melissa drove","Monterey Bay Aquarium","Pacific coastal highway"],ms:"🌉 Tunnel View. Coming out of the tunnel into sunshine and seeing the valley. Nobody wanted to leave."},
+    {name:"Transatlantic Disney Cruise — Disney Dream",emoji:"🌍",type:"flight",tag:"13 nights. Southampton to Fort Lauderdale. Everything.",dates:"2024",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Erika","the boys"],detail:"A Dublin layover en route to Southampton — Liam was taken with the Irish language, the Gaelic signage catching his attention immediately. A small prop plane from Dublin to Southampton. Then 13 nights on the Disney Dream: Southampton → Vigo, Spain → Lisbon, Portugal → Ponta Delgada, Azores → Fort Lauderdale. As Jeremiah wrote: 'Everything — the whole time, so many memories.'",hl:["Dublin layover — Liam fascinated by Irish/Gaelic language","Prop plane Dublin to Southampton","Vigo, Spain","Lisbon, Portugal","Ponta Delgada, Azores","13 nights across the Atlantic"],ms:"🌍 Everything — the whole time, so many memories. Thirteen nights across the Atlantic."},
+    {name:"Ocean City, NJ — Ewing Family",emoji:"🏖️",type:"road",tag:"Liam and Jeremiah only this year.",dates:"October 2024",who:["Liam","Jeremiah"],detail:"An Ewing family Ocean City trip — just Liam and Jeremiah this year.",hl:["Just Liam and Jeremiah"],ms:null}
+  ]},
+  {year:2025,nights:28,drive:1100,flight:6360,sv:8,ss:5,countries:2,trips:[
+    {name:"Disney World Trip #11",emoji:"✨",type:"flight",tag:"The eleventh Disney World trip.",dates:"February/March 2025",who:["Melissa","Jeremiah","Liam"],detail:"The eleventh Disney World trip.",hl:[],ms:null},
+    {name:"Shea Vacation #8 — Saw Creek Estates",emoji:"🌊",type:"road",tag:"Waterfall Wonder house. Pop Pop's 60th birthday.",dates:"April 2025",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop","Uncle Jordan","Erin"],detail:"The 'Waterfall Wonder' house at Saw Creek Estates — enormous, with the waterfall audible from the car door on arrival. Pop Pop's 60th birthday — the family arrived early to decorate. Jordan's girlfriend Erin joined. Orion — Jordan's dog — came along smiling the whole trip. Bushkill Falls first visit. Aquatopia indoor waterpark: Liam worked up to the bigger slides and loved them. Pocono Rocks climbing and ninja course. Jason Bishop magic show. Spa afternoon for Melissa and Lourdes.",hl:["Pop Pop's 60th birthday — decorated before he arrived","Waterfall audible from the car door","Aquatopia — Liam loved the big slides","Bushkill Falls first visit","Pocono Rocks climbing course","Jason Bishop magic show","Erin joins for the first time"],ms:"🌊 Pop Pop's 60th birthday. Decorated before he arrived. Waterfall audible from the car door."},
+    {name:"Illinois — Katie's Baby Shower",emoji:"🎀",type:"flight",tag:"AirBnB with the extended family.",dates:"April 2025",who:["Melissa","Jeremiah","Liam","Amber","Frankie","Meghan"],detail:"An AirBnB stay with Amber, Frankie, Meghan, and their kids for Aunt Katie's baby shower.",hl:["Katie's baby shower"],ms:null},
+    {name:"Legoland NY — Mom & Liam Special",emoji:"🧱",type:"road",tag:"Third special Mom and Liam trip to Legoland.",dates:"May 2025",who:["Melissa","Liam"],detail:"A third special Mom and Liam trip to Legoland in Goshen, New York.",hl:["Third Mom and Liam special trip"],ms:null},
+    {name:"Lancaster County Cousins Weekend",emoji:"🌽",type:"road",tag:"Cherry Crest Farm. Corn eating competition. Matching shirts.",dates:"July 2025",who:["Melissa","Jeremiah","Liam","Aunt Katie","Uncle Kory","Uncle Jason","Aunt Amber","Jax","Bryce","Aunt Lauren","Rob","Lizzie","Ellie"],detail:"A cousins weekend in Lancaster County around July 4th. Cherry Crest Farm — fireworks and festivities. Uncle Kory and Aunt Lauren competed in a corn eating competition. A pig race. Aunt Katie brought matching shirts for the whole family.",hl:["Corn eating competition — Uncle Kory vs Aunt Lauren","Pig race","Matching family shirts from Aunt Katie","Cherry Crest Farm fireworks","All the cousins together"],ms:null},
+    {name:"Norwegian Cruise — New England & Canada",emoji:"🦀",type:"road",tag:"NYC departure. Bar Harbor. First crab roll. Acadia.",dates:"2025",who:["Melissa","Jeremiah","Liam"],detail:"Drove to New York City for departure. The hotel room — 11th floor with floor-to-ceiling windows overlooking the Hudson — was a revelation. Pizza and pasta with a view. Norwegian Getaway: NYC → Boston → Bar Harbor → Halifax, NS → Saint John, NB. Boston: a tour with Melissa's cousin, a famous cannoli. Bar Harbor: anchored offshore, tendered into town, Jeremiah's first fresh crab roll, Acadia National Park and Cadillac Mountain.",hl:["NYC hotel with Hudson views","Bar Harbor tender boat in","First fresh crab roll ever","Acadia National Park — Cadillac Mountain","Boston tour with Melissa's cousin","Halifax and Saint John, Canada"],ms:"🦀 First crab roll. Bar Harbor. The tender boat in. Worth every minute."},
+    {name:"Universal Epic Universe",emoji:"🎮",type:"flight",tag:"First Universal trip. VIP tour. Nintendo World. No waits.",dates:"June 6–8, 2025",who:["Melissa","Jeremiah","Liam"],detail:"The first ever Universal trip — and the brand new Epic Universe. Three days at the Helios Grand Hotel. VIP group tour with guide Z — who had seen the park before it opened to the public. No waits; the group walked through exits to ride fronts. Ministry of Magic: walking into that massive space was one of the most awe-inspiring moments of the trip. Super Nintendo World: Donkey Kong coaster, Mario Kart, Bowser game with Liam's Power-Up Band. Isle of Berk: Hiccup's Wing Glider — the furthest Liam had pushed into thrill rides yet. Room service with fancy ketchup in glass bottles.",hl:["VIP tour — no waits for any ride","Guide Z had seen the park before it opened","Ministry of Magic — walking into that space was surreal","Nintendo World in person — up through the pipe","Liam's Power-Up Band and Bowser game","Hiccup's Wing Glider — furthest thrill ride yet","Room service with fancy ketchup in glass bottles"],ms:"🎮 Walking into Nintendo World and seeing it in person after watching videos. Truly being inside that world."},
+    {name:"Illinois — Katie & Kory's Wedding",emoji:"💍",type:"flight",tag:"Wedding trip to Chicago.",dates:"November 2025",who:["Melissa","Jeremiah","Liam","extended family"],detail:"A wedding trip to Illinois for Aunt Katie and Uncle Kory's wedding.",hl:["Katie and Kory's wedding"],ms:null},
+    {name:"New York City Overnight",emoji:"🗽",type:"road",tag:"First subway. Ice skating at Wollman Rink. Central Park.",dates:"Late November 2025",who:["Melissa","Jeremiah","Liam","Aunt Lauren","Rob","kids"],detail:"Drove to Hoboken and ferried into the city. Times Square. Favourite pizza shop. Bagels. Liam's first NYC subway ride. Ice skating at the Wollman Rink in Central Park, then a night walk through the park. The 9/11 Memorial. The Harry Potter store. A Santa North Pole experience.",hl:["First NYC subway ride","Ice skating at Wollman Rink, Central Park","Night walk through Central Park","9/11 Memorial","Harry Potter store","Hoboken ferry into Manhattan"],ms:"🗽 First subway ride. First time ice skating in Central Park. The city does Christmas well."}
+  ]},
+  {year:2026,nights:9,drive:200,flight:3100,sv:2,ss:2,countries:2,trips:[
+    {name:"Dominican Republic — All-Inclusive",emoji:"🌴",type:"flight",tag:"Left a winter ice storm. Arrived in paradise.",dates:"January/February 2026",who:["Melissa","Jeremiah","Liam"],detail:"A four-day all-inclusive resort trip — Liam's first all-inclusive. The trip came during a brutal winter ice storm back home. Melissa was about to start a new role. Daily water slides, a favourite cabana, and Liam's swimming improved significantly every day.",hl:["Liam's first all-inclusive","Left a winter ice storm","Liam's swimming improving every day","Favourite cabana"],ms:"🌴 Left a winter ice storm. Arrived in paradise. Liam's swimming improving every day."},
+    {name:"Shea Vacation #9 — Poconos, PA",emoji:"🧩",type:"road",tag:"The island by canoe. Buried treasure. The 2,000-piece puzzle.",dates:"April 2026",who:["Melissa","Jeremiah","Liam","Nana","Pop Pop"],detail:"A new AirBnB on a small lake in the Poconos. Liam and Jeremiah discovered 'the island' — a neighborhood park accessible only by canoe — and returned 3–4 days in a row. They buried a metal puzzle piece in the sand for someone to find someday. Melissa and Nana went horseback riding. Pickleball. Both birthdays celebrated with decorations. A candle shop, a pottery art studio — pieces glazed and mailed home. And the 2,000-piece puzzle: Melissa's dad said he didn't know if they'd finish it. A special puzzle table was ordered mid-trip. The puzzle was finished.",hl:["The island — only accessible by canoe","Buried treasure on the island beach","The 2,000-piece puzzle — finished","Puzzle table ordered mid-trip","Pottery pieces glazed and mailed home","Both birthdays celebrated","Liam turning sticks into swords"],ms:"🧩 The 2,000-piece puzzle. The doubt. The puzzle table. The finish. 'We did it.'"}
+  ]}
+];
+
+const MILESTONES = YEARS.flatMap(y =>
+  y.trips.filter(t=>t.ms).map(t=>({year:y.year,age:y.year-2015,emoji:t.emoji,text:t.ms,trip:t.name}))
+);
+
+const CAST = [
+  {name:"Melissa",role:"Mom",emoji:"👩",color:"#F0C040",desc:"64 trips",
+   stats:{trips:64,years:"2015–2026",places:"19 states · 8 countries"},
+   tripList:[
+     {name:"Every family trip, 2015–2026",year:"",note:"Melissa was on every trip except the Outer Banks boys trip (2022) when she was away for work."},
+     {name:"Disney World Trip #8 — Mom & Liam Special",year:2023,note:"Special trip while Jeremiah was at the Indy 500."},
+     {name:"Legoland NY — Mom & Liam Special",year:2024,note:"Second special Mom & Liam trip while Jeremiah was at the Indy 500."},
+     {name:"Legoland NY — Mom & Liam Special",year:2025,note:"Third special Mom & Liam trip."},
+   ]},
+  {name:"Jeremiah",role:"Dad",emoji:"👨",color:"#C4E0F9",desc:"62 trips",
+   stats:{trips:62,years:"2015–2026",places:"19 states · 8 countries"},
+   tripList:[
+     {name:"Every family trip, 2015–2026",year:"",note:"Jeremiah was on every trip except the 3 special Mom & Liam trips."},
+     {name:"Missed: Disney World Trip #8 — Mom & Liam",year:2023,note:"At the Indianapolis 500."},
+     {name:"Missed: Legoland NY — Mom & Liam",year:2024,note:"At the Indianapolis 500."},
+     {name:"Missed: Legoland NY — Mom & Liam",year:2025,note:"Away while Melissa and Liam did their third special trip."},
+   ]},
+  {name:"Liam",role:"The traveler",emoji:"⭐",color:"#4CAF82",desc:"65 trips · since age 3 months",
+   stats:{trips:65,years:"2015–2026",places:"19 states · 8 countries"},
+   tripList:[
+     {name:"Every single trip, 2015–2026",year:"",note:"Liam has been on every trip in the archive — starting at 3 months old."},
+   ]},
+  {name:"Nana (Lourdes)",role:"Melissa's mom",emoji:"👵",color:"#F0C040",desc:"11 trips",
+   stats:{trips:11,years:"2018–2026",places:"VA · NY · TN · PA · AK · England · Portugal · Spain"},
+   tripList:[
+     {name:"Shea Vacation #1 — Massanutten, VA",year:2018,note:"The very first Shea family vacation."},
+     {name:"Shea Vacation #2 — Conesus Lake, NY",year:2019,note:"Niagara Falls first visit. Maid of the Mist."},
+     {name:"Shea Vacation #3 — Seneca Lake (COVID)",year:2020,note:"First emergence after COVID."},
+     {name:"Shea Vacation #4 — Honeoye Lake, NY",year:2020,note:"Full house. Second Niagara Falls visit."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Sophia's first trip. Easter egg hunt."},
+     {name:"Shea Vacation #6 — Poconos, PA",year:2023,note:"UTV convoy through 25 forested acres."},
+     {name:"Alaska Cruise — Disney Wonder",year:2023,note:"Vancouver to Ketchikan. Float plane over five glaciers."},
+     {name:"Shea Vacation #7 — Conesus Lake, NY",year:2024,note:"Kayaking in the snow. Foster dogs Luna and her mum."},
+     {name:"Transatlantic Disney Cruise",year:2024,note:"13 nights — Southampton to Fort Lauderdale."},
+     {name:"Shea Vacation #8 — Saw Creek Estates",year:2025,note:"Pop Pop's 60th birthday. Waterfall Wonder house."},
+     {name:"Shea Vacation #9 — Poconos, PA",year:2026,note:"The island by canoe. The 2,000-piece puzzle."},
+   ]},
+  {name:"Pop Pop (Don)",role:"Melissa's dad",emoji:"👴",color:"#F0C040",desc:"11 trips",
+   stats:{trips:11,years:"2018–2026",places:"VA · NY · TN · PA · AK · England · Portugal · Spain"},
+   tripList:[
+     {name:"Shea Vacation #1 — Massanutten, VA",year:2018,note:"The very first Shea family vacation."},
+     {name:"Shea Vacation #2 — Conesus Lake, NY",year:2019,note:"Niagara Falls first visit. Maid of the Mist."},
+     {name:"Shea Vacation #3 — Seneca Lake (COVID)",year:2020,note:"First emergence after COVID."},
+     {name:"Shea Vacation #4 — Honeoye Lake, NY",year:2020,note:"Full house. Second Niagara Falls visit."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Sophia's first trip. Easter egg hunt."},
+     {name:"Shea Vacation #6 — Poconos, PA",year:2023,note:"UTV convoy through 25 forested acres."},
+     {name:"Alaska Cruise — Disney Wonder",year:2023,note:"Vancouver to Ketchikan. Float plane over five glaciers."},
+     {name:"Shea Vacation #7 — Conesus Lake, NY",year:2024,note:"Kayaking in the snow. Foster dogs."},
+     {name:"Transatlantic Disney Cruise",year:2024,note:"13 nights — Southampton to Fort Lauderdale."},
+     {name:"Shea Vacation #8 — Saw Creek Estates",year:2025,note:"His 60th birthday — family decorated before he arrived."},
+     {name:"Shea Vacation #9 — Poconos, PA",year:2026,note:"The island by canoe. The 2,000-piece puzzle."},
+   ]},
+  {name:"Uncle Jordan",role:"Melissa's brother",emoji:"🧑",color:"#5A8AB0",desc:"8 trips",
+   stats:{trips:8,years:"2018–2025",places:"VA · NY · TN · PA"},
+   tripList:[
+     {name:"Shea Vacation #1 — Massanutten, VA",year:2018,note:"The very first Shea family vacation."},
+     {name:"Seneca Lake, Finger Lakes",year:2019,note:"Liam's Falls discovered here."},
+     {name:"Shea Vacation #2 — Conesus Lake, NY",year:2019,note:"Niagara Falls. Maid of the Mist."},
+     {name:"Shea Vacation #3 — Seneca Lake (COVID)",year:2020,note:"First emergence after COVID."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Arrived in a brand new Tesla."},
+     {name:"Shea Vacation #6 — Poconos, PA",year:2023,note:"UTV convoy. Brought Alix."},
+     {name:"Shea Vacation #7 — Conesus Lake, NY",year:2024,note:"Kayaking in the snow."},
+     {name:"Shea Vacation #8 — Saw Creek Estates",year:2025,note:"Brought girlfriend Erin and dog Orion."},
+   ]},
+  {name:"Abuela",role:"Nana's mom · Melissa's grandmother",emoji:"👵",color:"#B07BE0",desc:"3 trips",
+   stats:{trips:3,years:"2021–2023",places:"TN · PA"},
+   tripList:[
+     {name:"Gatlinburg & Great Smoky Mountains, TN",year:2021,note:"Spring break trip. Haskins Creek Falls."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Easter egg hunt. Kayaking on the lake."},
+     {name:"Shea Vacation #6 — Poconos, PA",year:2023,note:"UTV convoy — came back covered in mud."},
+   ]},
+  {name:"Abuelo",role:"Nana's dad · Melissa's grandfather",emoji:"👴",color:"#B07BE0",desc:"3 trips",
+   stats:{trips:3,years:"2021–2023",places:"TN · PA"},
+   tripList:[
+     {name:"Gatlinburg & Great Smoky Mountains, TN",year:2021,note:"Spring break trip. Haskins Creek Falls."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Easter egg hunt. Kayaking on the lake."},
+     {name:"Shea Vacation #6 — Poconos, PA",year:2023,note:"UTV convoy — came back covered in mud."},
+   ]},
+  {name:"Uncle Stephen & Aunt Hope",role:"Melissa's brother & sister-in-law",emoji:"👫",color:"#5A8AB0",desc:"1 trip",
+   stats:{trips:1,years:"2020",places:"NY"},
+   tripList:[
+     {name:"Shea Vacation #4 — Honeoye Lake, NY",year:2020,note:"Full house Shea vacation. Niagara Falls return trip."},
+   ]},
+  {name:"Ruby",role:"Uncle Stephen & Aunt Hope's daughter",emoji:"👧",color:"#5A8AB0",desc:"1 trip",
+   stats:{trips:1,years:"2020",places:"NY"},
+   tripList:[
+     {name:"Shea Vacation #4 — Honeoye Lake, NY",year:2020,note:"Full house Shea vacation on Honeoye Lake."},
+   ]},
+  {name:"Uncle Jason & Aunt Amber",role:"Jeremiah's family",emoji:"👫",color:"#4CAF82",desc:"2 trips",
+   stats:{trips:2,years:"2025",places:"PA · IL"},
+   tripList:[
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"Cherry Crest Farm. Corn eating competition. Matching shirts."},
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+   ]},
+  {name:"Uncle Jason",role:"Jeremiah's family",emoji:"🧑",color:"#4CAF82",desc:"8 trips",
+   stats:{trips:8,years:"2016–2025",places:"NJ · PA · IL"},
+   tripList:[
+     {name:"Ocean City, NJ — Ewing Family",year:2016,note:"First annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2017,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2018,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2019,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2020,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2021,note:"Annual Ewing family beach trip."},
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"Cherry Crest Farm. Corn eating competition."},
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+   ]},
+  {name:"Jax & Bryce",role:"Jason & Erika's sons",emoji:"👦",color:"#4CAF82",desc:"10 trips",
+   stats:{trips:10,years:"2016–2025",places:"NJ · VA · FL · Bahamas · England · PA · IL"},
+   tripList:[
+     {name:"Ocean City, NJ — Ewing Family",year:2016,note:"First annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2017,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2018,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2019,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2020,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2021,note:"Annual Ewing family beach trip."},
+     {name:"Camper Camping — Chincoteague, VA",year:"TBD",note:"Assateague Island. Stayed in a rented cabin with mom."},
+     {name:"Bahamas Disney Cruise — Disney Magic",year:2024,note:"Their first cruise with Erika."},
+     {name:"Transatlantic Disney Cruise — Disney Dream",year:2024,note:"13 nights across the Atlantic."},
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+   ]},
+  {name:"Aunt Lauren & Rob",role:"Jeremiah's sister & her partner",emoji:"👫",color:"#E07B5A",desc:"3 trips",
+   stats:{trips:3,years:"2025",places:"PA · IL · NY"},
+   tripList:[
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"Corn eating competition — Lauren vs Uncle Kory."},
+     {name:"New York City Overnight",year:2025,note:"Hoboken ferry in. Ice skating at Wollman Rink."},
+   ]},
+  {name:"Ellie & Lizzie",role:"Aunt Lauren's daughters",emoji:"👧",color:"#E07B5A",desc:"3 trips",
+   stats:{trips:3,years:"2025",places:"PA · IL · NY"},
+   tripList:[
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"All the cousins together at Cherry Crest Farm."},
+     {name:"New York City Overnight",year:2025,note:"Ice skating in Central Park together."},
+   ]},
+  {name:"James & Lucy",role:"Rob's kids",emoji:"👦👧",color:"#E07B5A",desc:"3 trips",
+   stats:{trips:3,years:"2025",places:"PA · IL · NY"},
+   tripList:[
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"Wedding trip to Chicago."},
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"All the cousins together at Cherry Crest Farm."},
+     {name:"New York City Overnight",year:2025,note:"Ice skating in Central Park together."},
+   ]},
+  {name:"Uncle Kory",role:"Aunt Katie's husband",emoji:"🧑",color:"#5A8AB0",desc:"1 trip",
+   stats:{trips:1,years:"2025",places:"PA"},
+   tripList:[
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"Corn eating competition — Kory vs Aunt Lauren."},
+   ]},
+  {name:"Erika",role:"Jason's ex · Jax & Bryce's mom · family friend",emoji:"👩",color:"#5A8AB0",desc:"7 trips",
+   stats:{trips:7,years:"2016–2024",places:"NJ · VA · FL · Bahamas · England · Portugal · Spain"},
+   tripList:[
+     {name:"Ocean City, NJ — Ewing Family",year:2016,note:"First annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2017,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2018,note:"Annual Ewing family beach trip."},
+     {name:"Ocean City, NJ — Ewing Family",year:2019,note:"Annual Ewing family beach trip."},
+     {name:"Camper Camping — Chincoteague, VA",year:"TBD",note:"Assateague Island visit. Erika and the boys stayed in a rented cabin nearby."},
+     {name:"Bahamas Disney Cruise — Disney Magic",year:2024,note:"Her and the boys' first cruise. Disney Lookout Cay."},
+     {name:"Transatlantic Disney Cruise — Disney Dream",year:2024,note:"13 nights across the Atlantic."},
+   ]},
+  {name:"Jamie & Emma",role:"Family friends",emoji:"👨‍👧",color:"#6B8FA8",desc:"4 trips",
+   stats:{trips:4,years:"2019–2020",places:"MD · NY · DE"},
+   tripList:[
+     {name:"Ocean City, MD with Jamie",year:2019,note:"Holiday Inn, pool with slides, boardwalk."},
+     {name:"Ocean City, MD with Jamie",year:2020,note:"Return overnight."},
+     {name:"Shea Vacation #3 — Seneca Lake (COVID)",year:2020,note:"Joined mid-week. Three waterfalls, then a bigger one."},
+     {name:"Lums Pond — First Tent Camping",year:2020,note:"Liam's first night ever sleeping in a tent."},
+   ]},
+  {name:"Sophia",role:"Family dog 🐾",emoji:"🐕",color:"#E07B5A",desc:"2 trips",
+   stats:{trips:2,years:"TBD–2022",places:"DE · TN"},
+   tripList:[
+     {name:"Camper Camping — Cape Henlopen State Park, DE",year:"TBD",note:"Sophia joined for a camper camping trip to Cape Henlopen."},
+     {name:"Shea Vacation #5 — Watts Bar Lake, TN",year:2022,note:"Her first Shea family vacation. Her own double bed. She was exhausted every night."},
+   ]},
+  {name:"Aunt Katie & Uncle Kory",role:"Jeremiah's sister & her husband",emoji:"👩",color:"#5A8AB0",desc:"5 trips",
+   stats:{trips:5,years:"2021–2025",places:"IL"},
+   tripList:[
+     {name:"Illinois — Chicago Birthday Trip",year:2021,note:"Liam's birthday trip — first time to Illinois."},
+     {name:"Illinois — Aunt Katie's Store",year:2022,note:"First visit to her store."},
+     {name:"Illinois — Katie's Baby Shower",year:2025,note:"AirBnB with the extended family."},
+     {name:"Illinois — Katie & Kory's Wedding",year:2025,note:"The wedding trip."},
+     {name:"Lancaster County Cousins Weekend",year:2025,note:"Matching family shirts — Katie's idea."},
+   ]},
+];
+
+const COUNTRIES = [
+  {name:"USA",flag:"🇺🇸",slept:true,note:"Home base — 19 states explored."},
+  {name:"Canada",flag:"🇨🇦",slept:false,note:"Vancouver, BC — Alaska Cruise departure 2023 · Halifax, NS & Saint John, NB — Norwegian Cruise 2025. Note: Niagara Falls visits were on the US side."},
+  {name:"Bahamas",flag:"🇧🇸",slept:true,note:"Castaway Cay — Disney Cruise 2021 · Nassau + Disney Lookout Cay — Bahamas Cruise 2024."},
+  {name:"England",flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",slept:true,note:"Southampton — transatlantic cruise departure, 2024."},
+  {name:"Ireland",flag:"🇮🇪",slept:false,note:"Dublin layover, 2024. Liam fascinated by the Irish/Gaelic language signage."},
+  {name:"Spain",flag:"🇪🇸",slept:false,note:"Vigo — transatlantic cruise port stop, 2024."},
+  {name:"Portugal",flag:"🇵🇹",slept:false,note:"Lisbon · Ponta Delgada, Azores — transatlantic cruise, 2024."},
+  {name:"Dominican Republic",flag:"🇩🇴",slept:true,note:"4-day all-inclusive, Jan/Feb 2026. Liam's first all-inclusive. Left a winter ice storm."},
+];
+
+const STAT_METRICS = [
+  {key:"total",label:"Total Miles",color:"#F0C040"},
+  {key:"drive",label:"Driving",color:"#4CAF82"},
+  {key:"flight",label:"Flying",color:"#C4E0F9"},
+  {key:"nights",label:"Nights Away",color:"#E07B5A"},
+  {key:"sv",label:"States",color:"#5A8AB0"},
+  {key:"countries",label:"Countries",color:"#B07BE0"},
+];
+
+// ═══════════════════════════════════════════════════ STATE
+
+let openYear = null;
+let activeMF = "all";
+let activeSM = "total";
+const FIPS = {"01":"AL","02":"AK","04":"AZ","05":"AR","06":"CA","08":"CO","09":"CT","10":"DE","11":"DC","12":"FL","13":"GA","15":"HI","16":"ID","17":"IL","18":"IN","19":"IA","20":"KS","21":"KY","22":"LA","23":"ME","24":"MD","25":"MA","26":"MI","27":"MN","28":"MS","29":"MO","30":"MT","31":"NE","32":"NV","33":"NH","34":"NJ","35":"NM","36":"NY","37":"NC","38":"ND","39":"OH","40":"OK","41":"OR","42":"PA","44":"RI","45":"SC","46":"SD","47":"TN","48":"TX","49":"UT","50":"VT","51":"VA","53":"WA","54":"WV","55":"WI","56":"WY"};
+const STATES_SLEPT   = new Set(["DE","VA","FL","NJ","NY","MD","TN","IL","AZ","CA","CO","NC","AK","PA","GA"]);
+const STATES_VISITED = new Set(["DE","VA","FL","NJ","NY","MD","TN","IL","AZ","CA","CO","NC","AK","PA","MA","ME","GA","SC","DC"]);
+const STATE_NOTES = {
+  DE:"Home state — every trip starts and ends here.",FL:"Disney World (11 trips), Universal Epic Universe, cruises, Dominican Republic departure.",
+  VA:"Williamsburg (Liam's first trip ever!), Massanutten Shea Vacation #1, Great Wolf Lodge.",NJ:"Ocean City — annual Ewing family beach tradition.",
+  NY:"Finger Lakes (multiple), Catskills, Legoland, NYC overnight, Shea Vacations.",MD:"Ocean City with Jamie — multiple summers.",
+  TN:"Gatlinburg & Smoky Mountains, Watts Bar Lake Shea Vacation.",IL:"Visiting Aunt Katie — multiple trips, her wedding.",
+  AZ:"Grand Canyon Railway — Arizona birthday road trip 2021.",CA:"Disneyland, Laguna Beach, Yosemite, Sequoia, Monterey — 2021 & 2024.",
+  CO:"Colorado birthday road trip — RMNP, Breckenridge, Glenwood Springs.",NC:"Outer Banks — boys trip, Liam & Jeremiah.",
+  AK:"Alaska Disney Wonder cruise — float plane over 5 glaciers.",PA:"Poconos (Shea Vacations & day trips), Lancaster cousins weekend.",
+  MA:"Boston — Norwegian cruise port stop (day visit, slept on ship).",ME:"Bar Harbor — Norwegian cruise port stop, first crab roll.",
+  GA:"Hotel stop just over the Florida-Georgia line on the COVID drive home, 3:30am.",SC:"Drive-through on the COVID drive home from Disney.",
+  DC:"Washington DC overnight — Willard Hotel, Spy Museum, National Mall.",
+};
+
+// ═══════════════════════════════════════════════════ INIT
+
+function chip(text, color) {
+  return `<span class="chip" style="background:${color}22;color:${color}">${text}</span>`;
+}
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('section-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    if(b.textContent.toLowerCase()===id||(id==='timeline'&&b.textContent==='Timeline')||(id==='milestones'&&b.textContent==='Milestones')||(id==='cast'&&b.textContent==='Cast')||(id==='stats'&&b.textContent==='Stats')||(id==='map'&&b.textContent==='Map'))
+      b.classList.add('active');
+  });
+}
+
+function showMapTab(tab, btn) {
+  document.getElementById('us-panel').style.display = tab==='us'?'block':'none';
+  document.getElementById('world-panel').style.display = tab==='world'?'block':'none';
+  document.querySelectorAll('.map-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if (tab === 'world') initWorldMap();
+}
+
+function openModal(trip, year) {
+  const age = year - 2015;
+  document.getElementById('modal-emoji').textContent = trip.emoji;
+  document.getElementById('modal-title').textContent = trip.name;
+  document.getElementById('modal-chips').innerHTML =
+    chip(trip.dates,'#F0C040') +
+    chip('Age '+(age===0?'3 months':age),'#C4E0F9') +
+    chip(trip.type==='flight'?'✈ Flight':'🚗 Road trip', trip.type==='flight'?'#C4E0F9':'#4CAF82');
+  if(trip.who && trip.who.length){
+    document.getElementById('modal-who-label').style.display='block';
+    document.getElementById('modal-who').style.display='block';
+    document.getElementById('modal-who').textContent = trip.who.join(' · ');
+  } else {
+    document.getElementById('modal-who-label').style.display='none';
+    document.getElementById('modal-who').style.display='none';
+  }
+  document.getElementById('modal-detail').textContent = trip.detail;
+  const hlEl = document.getElementById('modal-highlights');
+  if(trip.hl && trip.hl.length){
+    document.getElementById('modal-hl-label').style.display='block';
+    hlEl.innerHTML = trip.hl.map(h=>`<div class="modal-hl"><span class="modal-hl-arrow">→</span>${h}</div>`).join('');
+  } else {
+    document.getElementById('modal-hl-label').style.display='none';
+    hlEl.innerHTML='';
+  }
+  const msEl = document.getElementById('modal-milestone');
+  if(trip.ms){ msEl.style.display='block'; msEl.textContent=trip.ms; }
+  else { msEl.style.display='none'; }
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeCastModal(); } });
+
+// ═══════════════════════════════════════════════════ TIMELINE
+
+function renderTimeline() {
+  const el = document.getElementById('timeline-list');
+  el.innerHTML = YEARS.map(y=>{
+    const total = y.drive+y.flight;
+    const isOpen = openYear===y.year;
+    return `
+    <div>
+      <div class="year-row${isOpen?' open':''}" onclick="toggleYear(${y.year})">
+        <div class="year-dot"></div>
+        <div class="year-num">${y.year}</div>
+        <div class="year-chips">
+          ${chip(y.trips.length+' trip'+(y.trips.length!==1?'s':''),'#C4E0F9')}
+          ${chip(y.nights+' nights','#F0C040')}
+          ${chip(total.toLocaleString()+' mi','#4CAF82')}
+          ${chip(y.sv+' states · '+y.countries+(y.countries===1?' country':' countries'),'#6B8FA8')}
+        </div>
+        <div class="year-caret">${isOpen?'▲':'▼'}</div>
+      </div>
+      ${isOpen?`<div class="trips-panel">${y.trips.map((t,i)=>`
+        <div class="trip-row" onclick="openModal(YEARS.find(yr=>yr.year===${y.year}).trips[${i}],${y.year})">
+          <div class="trip-emoji">${t.emoji}</div>
+          <div class="trip-info">
+            <div class="trip-name">${t.name}</div>
+            <div class="trip-tag">${t.tag}</div>
+          </div>
+          <div class="trip-arrow">›</div>
+        </div>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleYear(year) {
+  openYear = openYear===year ? null : year;
+  renderTimeline();
+}
+
+// ═══════════════════════════════════════════════════ MILESTONES
+
+function renderMilestones() {
+  const years = ['all',...[...new Set(MILESTONES.map(m=>m.year))].sort()];
+  document.getElementById('mf-filters').innerHTML = years.map(y=>`
+    <button class="mf-btn${activeMF===y?' active':''}" onclick="setMF(${y==='all'?'"all"':y})">${y==='all'?'All':y}</button>
+  `).join('');
+  const shown = activeMF==='all' ? MILESTONES : MILESTONES.filter(m=>m.year===activeMF);
+  document.getElementById('milestone-list').innerHTML = shown.map(m=>`
+    <div class="milestone-card">
+      <div class="mc-inner">
+        <div class="mc-emoji">${m.emoji}</div>
+        <div>
+          <p class="mc-text">${m.text}</p>
+          <div class="mc-chips">
+            ${chip(m.year,'#F0C040')}
+            ${chip('Age '+(m.age===0?'3 months':m.age),'#C4E0F9')}
+            ${chip(m.trip,'#6B8FA8')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function setMF(val) { activeMF=val; renderMilestones(); }
+
+// ═══════════════════════════════════════════════════ CAST
+
+function renderCast() {
+  document.getElementById('cast-grid').innerHTML = CAST.map((p,i)=>`
+    <div class="cast-card" style="--cc:${p.color}" onclick="openCastModal(${i})">
+      <div class="cast-emoji">${p.emoji}</div>
+      <div class="cast-name">${p.name}</div>
+      <div class="cast-role" style="color:${p.color}">${p.role}</div>
+      <div class="cast-desc">${p.desc}</div>
+      <div class="cast-tap">Tap to see trips →</div>
+    </div>`).join('');
+}
+
+function openCastModal(idx) {
+  const p = CAST[idx];
+  document.getElementById('cm-emoji').textContent = p.emoji;
+  document.getElementById('cm-name').textContent = p.name;
+  document.getElementById('cm-role').innerHTML = `<span style="color:${p.color}">${p.role}</span>`;
+
+  // Mini stats
+  const s = p.stats;
+  document.getElementById('cm-stats').innerHTML = [
+    {v:s.trips,l:s.trips===1?'trip':'trips',c:p.color},
+    {v:s.years,l:'years',c:'#C4E0F9'},
+    {v:s.places,l:'places',c:'#6B8FA8'},
+  ].map(({v,l,c})=>`
+    <div style="text-align:center;min-width:60px">
+      <div style="font-size:16px;font-weight:800;color:${c}">${v}</div>
+      <div style="font-size:9px;color:#6B8FA8;text-transform:uppercase;letter-spacing:.08em;margin-top:1px">${l}</div>
+    </div>`).join('');
+
+  // Trip list
+  document.getElementById('cm-trips').innerHTML = p.tripList.map(t=>`
+    <div style="display:flex;gap:10px;padding:9px 12px;background:#162540;border-radius:8px;margin-bottom:6px;border:1px solid #1E3A5F;align-items:flex-start">
+      <div style="color:${p.color};font-size:10px;font-weight:700;flex-shrink:0;min-width:30px;margin-top:2px">${t.year||''}</div>
+      <div>
+        <div style="font-weight:600;color:#E8EEF4;font-size:12px">${t.name}</div>
+        ${t.note?`<div style="color:#6B8FA8;font-size:11px;margin-top:2px;line-height:1.5">${t.note}</div>`:''}
+      </div>
+    </div>`).join('');
+
+  // Personal note (hidden until populated)
+  const noteWrap = document.getElementById('cm-note-wrap');
+  noteWrap.style.display = 'none';
+
+  const overlay = document.getElementById('cast-modal-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('cast-modal-box').style.borderColor = p.color;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCastModal() {
+  document.getElementById('cast-modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════════════════ STATS
+
+function renderStats() {
+  const btnEl = document.getElementById('stat-btns');
+  btnEl.innerHTML = STAT_METRICS.map(m=>`
+    <button class="sm-btn${activeSM===m.key?' active':''}" style="${activeSM===m.key?'border-color:'+m.color+';color:'+m.color:''}"
+      onclick="setSM('${m.key}')">${m.label}</button>`).join('');
+  const cur = STAT_METRICS.find(m=>m.key===activeSM);
+  const vals = YEARS.map(y=>({year:y.year,val:activeSM==='total'?(y.drive+y.flight):(y[activeSM]||0)}));
+  const max = Math.max(...vals.map(v=>v.val));
+  document.getElementById('bar-chart').innerHTML = vals.map(v=>{
+    const pct = max>0?(v.val/max)*100:0;
+    const label = ['total','drive','flight'].includes(activeSM) ? v.val.toLocaleString()+' mi' : String(v.val);
+    return `<div class="bar-row">
+      <div class="bar-year">${v.year}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cur.color}"></div></div>
+      <div class="bar-val" style="color:${cur.color}">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function setSM(key) { activeSM=key; renderStats(); }
+
+// ═══════════════════════════════════════════════════ WORLD MAP
+
+// ISO numeric codes for visited countries
+// UK=826, Ireland=372, Spain=724, Portugal=620, USA=840, Canada=124, Bahamas=44, Dominican Republic=214
+const COUNTRIES_SLEPT   = new Set([840, 826, 44, 214]); // USA, England, Bahamas, Dominican Republic
+const COUNTRIES_VISITED = new Set([840, 124, 44, 214, 826, 372, 724, 620]); // all 8
+
+const COUNTRY_INFO = {
+  840: {name:"USA", flag:"🇺🇸", slept:true,  note:"Home base — 19 states explored across 11 years of adventures."},
+  124: {name:"Canada", flag:"🇨🇦", slept:false, note:"Vancouver, BC — Alaska Cruise departure 2023 · Halifax, NS & Saint John, NB — Norwegian Cruise 2025."},
+  44:  {name:"Bahamas", flag:"🇧🇸", slept:true,  note:"Castaway Cay — Disney Cruise 2021 · Nassau + Disney Lookout Cay — Bahamas Cruise 2024."},
+  214: {name:"Dominican Republic", flag:"🇩🇴", slept:true,  note:"4-day all-inclusive, Jan/Feb 2026. Liam's first all-inclusive. Left a winter ice storm."},
+  826: {name:"England", flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", slept:true,  note:"Southampton — transatlantic cruise departure, 2024."},
+  372: {name:"Ireland", flag:"🇮🇪", slept:false, note:"Dublin layover, 2024. Liam fascinated by the Irish/Gaelic language signage."},
+  724: {name:"Spain", flag:"🇪🇸", slept:false, note:"Vigo — transatlantic cruise port stop, 2024."},
+  620: {name:"Portugal", flag:"🇵🇹", slept:false, note:"Lisbon · Ponta Delgada, Azores — transatlantic cruise, 2024."},
+};
+
+let worldMapInitialized = false;
+
+async function initWorldMap() {
+  if (worldMapInitialized) return;
+  worldMapInitialized = true;
+
+  const svg = d3.select('#world-svg');
+  const loading = document.getElementById('world-loading');
+  const errorEl = document.getElementById('world-error');
+  const tooltip = document.getElementById('world-tooltip');
+  const wrap = document.getElementById('world-map-wrap');
+
+  try {
+    const world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    loading.style.display = 'none';
+    document.getElementById('world-svg').style.display = 'block';
+
+    const W = 960, H = 500;
+
+    // North Atlantic focused projection
+    // Centers on mid-Atlantic to show North America + Caribbean + Western Europe
+    const projection = d3.geoMercator()
+      .center([-20, 40])
+      .scale(340)
+      .translate([W / 2, H / 2]);
+
+    const path = d3.geoPath().projection(projection);
+    const countries = topojson.feature(world, world.objects.countries);
+    const borders = topojson.mesh(world, world.objects.countries, (a,b) => a !== b);
+
+    // Ocean background
+    svg.append('rect')
+      .attr('width', W).attr('height', H)
+      .attr('fill', '#0B1628');
+
+    // Draw graticule (grid lines) for map feel
+    const graticule = d3.geoGraticule()();
+    svg.append('path')
+      .datum(graticule)
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', '#1E3A5F')
+      .attr('stroke-width', 0.4)
+      .attr('opacity', 0.6);
+
+    // Draw countries
+    svg.selectAll('path.wc')
+      .data(countries.features)
+      .enter().append('path')
+      .attr('class', 'wc')
+      .attr('d', path)
+      .attr('fill', d => {
+        const id = +d.id;
+        if (COUNTRIES_SLEPT.has(id)) return '#F0C040';
+        if (COUNTRIES_VISITED.has(id)) return '#5A8AB0';
+        return '#162540';
+      })
+      .attr('opacity', d => COUNTRIES_VISITED.has(+d.id) ? 0.92 : 0.75)
+      .attr('stroke', '#0B1628')
+      .attr('stroke-width', 0.5)
+      .style('cursor', d => COUNTRIES_VISITED.has(+d.id) ? 'pointer' : 'default')
+      .on('mouseover', function(event, d) {
+        const id = +d.id;
+        const info = COUNTRY_INFO[id];
+        if (!info) return;
+        const slept = COUNTRIES_SLEPT.has(id);
+        const status = slept ? '✅ Visited & slept' : '🚢 Port / layover visit';
+        tooltip.innerHTML = `<strong style="color:#F0C040">${info.flag} ${info.name}</strong> — ${status}<br><span style="color:#6B8FA8;font-size:11px">${info.note}</span>`;
+        tooltip.style.opacity = '1';
+        d3.select(this).attr('opacity', 1).attr('stroke', '#E8EEF4').attr('stroke-width', 1.5);
+      })
+      .on('mousemove', function(event) {
+        const rect = wrap.getBoundingClientRect();
+        const x = event.clientX - rect.left + 12;
+        const y = event.clientY - rect.top - 10;
+        tooltip.style.left = Math.min(x, rect.width - 280) + 'px';
+        tooltip.style.top = Math.max(y - 80, 4) + 'px';
+      })
+      .on('mouseout', function(event, d) {
+        const id = +d.id;
+        tooltip.style.opacity = '0';
+        d3.select(this)
+          .attr('opacity', COUNTRIES_VISITED.has(id) ? 0.92 : 0.75)
+          .attr('stroke', '#0B1628')
+          .attr('stroke-width', 0.5);
+      });
+
+    // Country borders
+    svg.append('path')
+      .datum(borders)
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', '#0B1628')
+      .attr('stroke-width', 0.6)
+      .attr('pointer-events', 'none');
+
+    // Labels for visited countries
+    const labelOffsets = {
+      840: [0, 0],    // USA
+      124: [0, -8],   // Canada
+      44:  [0, 0],    // Bahamas
+      214: [0, 0],    // Dominican Republic
+      826: [2, 2],    // England
+      372: [-3, 0],   // Ireland
+      724: [0, 3],    // Spain
+      620: [-2, 3],   // Portugal
+    };
+
+    svg.selectAll('text.wlabel')
+      .data(countries.features.filter(d => COUNTRIES_VISITED.has(+d.id)))
+      .enter().append('text')
+      .attr('class', 'wlabel')
+      .attr('transform', d => {
+        const c = path.centroid(d);
+        const off = labelOffsets[+d.id] || [0,0];
+        return c && !isNaN(c[0]) ? `translate(${c[0]+off[0]},${c[1]+off[1]})` : 'translate(-999,-999)';
+      })
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .style('font-size', d => {
+        // Bigger labels for bigger countries
+        return [840, 124].includes(+d.id) ? '10px' : '7px';
+      })
+      .style('fill', '#0B1628')
+      .style('font-weight', '700')
+      .style('pointer-events', 'none')
+      .text(d => {
+        const info = COUNTRY_INFO[+d.id];
+        return info ? info.name : '';
+      });
+
+    // Azores annotation (they show as tiny islands, add a marker)
+    const azoresCoords = projection([-25.5, 37.7]);
+    if (azoresCoords) {
+      svg.append('circle')
+        .attr('cx', azoresCoords[0])
+        .attr('cy', azoresCoords[1])
+        .attr('r', 5)
+        .attr('fill', '#5A8AB0')
+        .attr('stroke', '#0B1628')
+        .attr('stroke-width', 0.8)
+        .style('cursor', 'pointer')
+        .on('mouseover', function(event) {
+          tooltip.innerHTML = `<strong style="color:#F0C040">🇵🇹 Azores (Portugal)</strong> — 🚢 Port visit<br><span style="color:#6B8FA8;font-size:11px">Ponta Delgada — transatlantic cruise stop, 2024.</span>`;
+          tooltip.style.opacity = '1';
+          d3.select(this).attr('r', 7).attr('fill', '#C4E0F9');
+        })
+        .on('mousemove', function(event) {
+          const rect = wrap.getBoundingClientRect();
+          tooltip.style.left = Math.min(event.clientX - rect.left + 12, rect.width - 280) + 'px';
+          tooltip.style.top = Math.max(event.clientY - rect.top - 80, 4) + 'px';
+        })
+        .on('mouseout', function() {
+          tooltip.style.opacity = '0';
+          d3.select(this).attr('r', 5).attr('fill', '#5A8AB0');
+        });
+
+      svg.append('text')
+        .attr('x', azoresCoords[0])
+        .attr('y', azoresCoords[1] - 9)
+        .attr('text-anchor', 'middle')
+        .style('font-size', '6px')
+        .style('fill', '#C4E0F9')
+        .style('font-weight', '700')
+        .style('pointer-events', 'none')
+        .text('Azores');
+    }
+
+  } catch(e) {
+    loading.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Could not load map. Check your internet connection.';
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════════════ D3 MAP
+
+async function initMap() {
+  const svg = d3.select('#map-svg');
+  const loading = document.getElementById('map-loading');
+  const errorEl = document.getElementById('map-error');
+  const tooltip = document.getElementById('map-tooltip');
+  const wrap = document.getElementById('map-wrap');
+
+  try {
+    const us = await d3.json('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
+    loading.style.display='none';
+    document.getElementById('map-svg').style.display='block';
+
+    const proj = d3.geoAlbersUsa().scale(1280).translate([480,300]);
+    const path = d3.geoPath().projection(proj);
+    const states = topojson.feature(us, us.objects.states);
+    const borders = topojson.mesh(us, us.objects.states, (a,b)=>a!==b);
+
+    svg.selectAll('path.st')
+      .data(states.features)
+      .enter().append('path')
+      .attr('class','st')
+      .attr('d', path)
+      .attr('fill', d=>{
+        const abbr = FIPS[String(d.id).padStart(2,'0')];
+        return STATES_SLEPT.has(abbr)?'#F0C040':STATES_VISITED.has(abbr)?'#5A8AB0':'#1E3A5F';
+      })
+      .attr('opacity',0.88)
+      .on('mouseover', function(event,d){
+        const abbr = FIPS[String(d.id).padStart(2,'0')];
+        if(!abbr) return;
+        const slept=STATES_SLEPT.has(abbr), visited=STATES_VISITED.has(abbr);
+        const status=slept?'✅ Visited & slept':visited?'🚗 Day visit / drive-through':'⬜ Not yet';
+        tooltip.innerHTML=`<strong style="color:#F0C040">${abbr}</strong> — ${status}${STATE_NOTES[abbr]?'<br><span style="color:#6B8FA8;font-size:11px">'+STATE_NOTES[abbr]+'</span>':''}`;
+        tooltip.classList.add('show');
+      })
+      .on('mousemove', function(event){
+        const rect=wrap.getBoundingClientRect();
+        const x=event.clientX-rect.left+12, y=event.clientY-rect.top-10;
+        tooltip.style.left=Math.min(x,rect.width-270)+'px';
+        tooltip.style.top=Math.max(y-70,4)+'px';
+      })
+      .on('mouseout', ()=>tooltip.classList.remove('show'));
+
+    svg.append('path').attr('class','st-border').attr('d',path(borders));
+
+    svg.selectAll('text.st-label')
+      .data(states.features.filter(d=>{
+        const abbr=FIPS[String(d.id).padStart(2,'0')];
+        return STATES_VISITED.has(abbr)||STATES_SLEPT.has(abbr);
+      }))
+      .enter().append('text')
+      .attr('class','st-label')
+      .attr('transform',d=>{const c=path.centroid(d);return c&&!isNaN(c[0])?`translate(${c})`:'translate(-999,-999)'})
+      .attr('text-anchor','middle').attr('dy','0.35em')
+      .text(d=>FIPS[String(d.id).padStart(2,'0')]||'');
+
+  } catch(e) {
+    loading.style.display='none';
+    errorEl.style.display='block';
+    errorEl.textContent='Could not load map. Check your internet connection.';
+  }
+}
+
+// ═══════════════════════════════════════════════════ START
+
+renderTimeline();
+renderMilestones();
+renderCast();
+renderStats();
+initMap();
+</script>
+</body>
+</html>
